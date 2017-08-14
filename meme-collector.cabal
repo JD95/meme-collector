@@ -22,5 +22,10 @@ executable meme-collector
                      , text
                      , optparse-applicative
                      , attoparsec
+                     , lens
+                     , wreq
                      , reddit
+                     , time
+                     , http-client
+                     , bytestring
 		     

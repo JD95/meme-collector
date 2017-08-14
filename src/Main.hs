@@ -1,12 +1,20 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeApplications #-}
 module Main where
 
 import Data.Semigroup ((<>))
 import Options.Applicative
 import Prelude ()
-import Protolude
+import Protolude hiding ((&))
 import Control.Arrow
 import Data.Maybe
+import Control.Lens
+import Control.Exception.Lens
+import Data.Time.Clock (diffTimeToPicoseconds)
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import Network.HTTP.Client (HttpException)
+import qualified Control.Exception as E
+import qualified Data.ByteString.Lazy as B
+import qualified Network.Wreq as W
 import qualified Data.Attoparsec.Text as A
 import qualified Reddit as R
 import qualified Reddit.Types as RT
@@ -52,14 +60,15 @@ main = do
 collect :: RT.Reddit ()
 collect = do
   info <- RA.getPosts' (RT.Options Nothing Nothing) RT.New (Just $ RT.R "AdviceAnimals")
-  liftIO . (mapM_ . mapM) print
+  liftIO . mapM_ (downloadImage "img")
+         . concat . catMaybes
          . fmap extractLinks
          . RT.contents $ info
 
-extractLinks :: RT.Post -> Maybe (Text, [Text])
+extractLinks :: RT.Post -> Maybe [Text]
 extractLinks post =
   case RT.content post of
-    (RT.Link l) ->  sequence (RT.title post, parseImgSource (l <> "\n"))
+    (RT.Link l) -> parseImgSource (l <> "\n")
     _ -> Nothing
 
 
@@ -94,5 +103,24 @@ parseNoExtention = fmap attatchEndings . join . A.maybeResult . A.parse (do
 
 parseImgSource url = parseExtention url <|> parseNoExtention url
 
+nameFromTime :: IO Text
+nameFromTime = toS . filter ('.' /=) . show . realToFrac <$> getPOSIXTime
+
+contentType :: W.Response a -> Maybe Text
+contentType r = r ^? W.responseHeader "Content-Type" & mapped %~ toS
+
+downloadImage :: Text -> Text -> IO ()
+downloadImage folder url = do
+  r' <- try @HttpException $ W.get (filter ('\n' /=) $ toS url)
+  flip (either (const $ pure ())) r' $ \r -> 
+    case r ^. W.responseStatus . W.statusCode of
+      200 -> do
+        time <- nameFromTime
+        let ext = case contentType r of
+                    Just "image/jpeg" -> ".jpg"
+                    Just "image/png" -> ".png"
+                    _ -> ""
+        B.writeFile (toS folder <> "/" <> toS time <> ext)  (r ^. W.responseBody)
+      _ -> pure ()
 
   
