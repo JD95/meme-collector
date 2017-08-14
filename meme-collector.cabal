@@ -21,5 +21,6 @@ executable meme-collector
                      , protolude
                      , text
                      , optparse-applicative
+                     , attoparsec
                      , reddit
 		     
