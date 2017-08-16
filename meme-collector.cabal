@@ -22,7 +22,7 @@ executable meme-collector
                      , text
                      , optparse-applicative
                      , attoparsec
-                     , lens
+                     , microlens-platform
                      , wreq
                      , reddit
                      , time

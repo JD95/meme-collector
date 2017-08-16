@@ -7,8 +7,7 @@ import Prelude ()
 import Protolude hiding ((&))
 import Control.Arrow
 import Data.Maybe
-import Control.Lens
-import Control.Exception.Lens
+import Lens.Micro.Platform
 import Data.Time.Clock (diffTimeToPicoseconds)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Network.HTTP.Client (HttpException)
